@@ -75,17 +75,21 @@ function sendError(res, error) {
   res.status(status).json({ message });
 }
 
-const server = app.listen(PORT, () => {
-  console.log(`업무일지 서버 실행 중: http://localhost:${PORT}`);
-  if (store.wasSeeded()) {
-    console.log('data/tasks.json 파일을 초기 업무 데이터로 만들었습니다.');
-  }
-});
+module.exports = app;
 
-server.on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`포트 ${PORT}이 이미 사용 중입니다. PORT 환경 변수를 바꿔 다시 실행해 주세요.`);
-    process.exit(1);
-  }
-  throw error;
-});
+if (require.main === module && !process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(`업무일지 서버 실행 중: http://localhost:${PORT}`);
+    if (store.wasSeeded()) {
+      console.log('data/tasks.json 파일을 초기 업무 데이터로 만들었습니다.');
+    }
+  });
+
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`포트 ${PORT}이 이미 사용 중입니다. PORT 환경 변수를 바꿔 다시 실행해 주세요.`);
+      process.exit(1);
+    }
+    throw error;
+  });
+}
