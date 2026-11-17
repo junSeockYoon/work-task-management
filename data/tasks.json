@@ -1,0 +1,161 @@
+[
+  {
+    "id": "task-001",
+    "title": "주간 보고서 초안 제출",
+    "description": "지난주 진행률, 위험 요소, 다음 주 계획을 한 장으로 정리해 팀 채널에 올립니다.",
+    "dueDate": "2026-11-14",
+    "priority": "High",
+    "status": "todo",
+    "createdAt": "2026-11-11T09:10:00+09:00"
+  },
+  {
+    "id": "task-002",
+    "title": "고객사 견적 회신",
+    "description": "수정된 범위를 반영한 견적서를 확인하고 회신 메일을 보냅니다.",
+    "dueDate": "2026-11-15",
+    "priority": "High",
+    "status": "in-progress",
+    "createdAt": "2026-11-13T11:00:00+09:00"
+  },
+  {
+    "id": "task-003",
+    "title": "디자인 시안 피드백 정리",
+    "description": "리뷰 코멘트를 화면별로 묶어 디자인 채널에 전달합니다.",
+    "dueDate": "2026-11-16",
+    "priority": "Medium",
+    "status": "todo",
+    "createdAt": "2026-11-14T15:20:00+09:00"
+  },
+  {
+    "id": "task-004",
+    "title": "결제 오류 로그 확인",
+    "description": "오늘 아침 접수된 결제 실패 건의 원인과 영향 범위를 파악합니다.",
+    "dueDate": "2026-11-17",
+    "priority": "High",
+    "status": "in-progress",
+    "createdAt": "2026-11-16T18:40:00+09:00"
+  },
+  {
+    "id": "task-005",
+    "title": "스탠드업 메모 공유",
+    "description": "어제 한 일, 오늘 할 일, 막힌 점을 짧게 정리해 팀에 남깁니다.",
+    "dueDate": "2026-11-17",
+    "priority": "Medium",
+    "status": "todo",
+    "createdAt": "2026-11-17T08:50:00+09:00"
+  },
+  {
+    "id": "task-006",
+    "title": "경비 영수증 정리",
+    "description": "이번 주 법인카드 영수증을 항목별로 모아 둡니다.",
+    "dueDate": "2026-11-17",
+    "priority": "Low",
+    "status": "todo",
+    "createdAt": "2026-11-16T13:15:00+09:00"
+  },
+  {
+    "id": "task-007",
+    "title": "분기 목표 중간 점검",
+    "description": "목표 대비 진행률을 확인하고 조정할 항목을 표시합니다.",
+    "dueDate": "2026-11-18",
+    "priority": "High",
+    "status": "todo",
+    "createdAt": "2026-11-15T10:00:00+09:00"
+  },
+  {
+    "id": "task-008",
+    "title": "온보딩 문서 보완",
+    "description": "새 동료가 막혔던 환경 설정 단계를 문서에 추가합니다.",
+    "dueDate": "2026-11-19",
+    "priority": "Medium",
+    "status": "todo",
+    "createdAt": "2026-11-16T16:05:00+09:00"
+  },
+  {
+    "id": "task-009",
+    "title": "배포 체크리스트 작성",
+    "description": "점검 항목, 담당, 롤백 기준을 한 목록으로 만듭니다.",
+    "dueDate": "2026-11-20",
+    "priority": "Low",
+    "status": "todo",
+    "createdAt": "2026-11-17T09:30:00+09:00"
+  },
+  {
+    "id": "task-010",
+    "title": "팀 위키 목차 정리",
+    "description": "오래된 문서를 묶고 새 목차 초안을 잡습니다.",
+    "dueDate": "2026-11-23",
+    "priority": "Low",
+    "status": "todo",
+    "createdAt": "2026-11-15T14:10:00+09:00"
+  },
+  {
+    "id": "task-011",
+    "title": "연말 회고 질문 초안",
+    "description": "회고 때 쓸 질문 목록을 미리 적어 둡니다.",
+    "dueDate": "2026-11-29",
+    "priority": "Medium",
+    "status": "todo",
+    "createdAt": "2026-11-16T17:45:00+09:00"
+  },
+  {
+    "id": "task-012",
+    "title": "메일 백로그 정리",
+    "description": "답장이 필요한 메일만 남기고 참고용 메일은 보관했습니다.",
+    "dueDate": "2026-11-16",
+    "priority": "High",
+    "status": "done",
+    "createdAt": "2026-11-15T09:00:00+09:00",
+    "completedAt": "2026-11-16T11:20:00+09:00"
+  },
+  {
+    "id": "task-013",
+    "title": "회의록 공유",
+    "description": "결정 사항과 액션 아이템을 정리해 참석자에게 보냈습니다.",
+    "dueDate": "2026-11-16",
+    "priority": "Medium",
+    "status": "done",
+    "createdAt": "2026-11-16T14:00:00+09:00",
+    "completedAt": "2026-11-16T17:05:00+09:00"
+  },
+  {
+    "id": "task-014",
+    "title": "버그 재현 절차 기록",
+    "description": "재현 단계와 기대 결과를 이슈에 남겨 두었습니다.",
+    "dueDate": "2026-11-15",
+    "priority": "Medium",
+    "status": "done",
+    "createdAt": "2026-11-14T10:30:00+09:00",
+    "completedAt": "2026-11-15T15:10:00+09:00"
+  },
+  {
+    "id": "task-015",
+    "title": "테스트 계정 권한 정리",
+    "description": "쓰지 않는 테스트 계정 권한을 회수했습니다.",
+    "dueDate": "2026-11-15",
+    "priority": "Low",
+    "status": "done",
+    "createdAt": "2026-11-13T11:40:00+09:00",
+    "completedAt": "2026-11-15T18:40:00+09:00"
+  },
+  {
+    "id": "task-016",
+    "title": "협업 툴 알림 정리",
+    "description": "필요한 채널 알림만 켜 두도록 설정을 바꿨습니다.",
+    "dueDate": "2026-11-13",
+    "priority": "Low",
+    "status": "done",
+    "createdAt": "2026-11-12T09:20:00+09:00",
+    "completedAt": "2026-11-13T13:00:00+09:00"
+  },
+  {
+    "id": "task-017",
+    "title": "신규 기능 요구사항 정리",
+    "description": "요청 배경, 범위, 제외 항목을 구분해 문서로 남겼습니다.",
+    "dueDate": "2026-11-12",
+    "priority": "High",
+    "status": "done",
+    "createdAt": "2026-11-10T15:00:00+09:00",
+    "completedAt": "2026-11-12T19:10:00+09:00"
+  }
+]

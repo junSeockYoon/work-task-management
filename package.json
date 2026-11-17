@@ -1,0 +1,17 @@
+{
+  "name": "daily-work-log",
+  "version": "1.0.0",
+  "private": true,
+  "description": "데일리 업무일지",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
