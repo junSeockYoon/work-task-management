@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const store = require('./lib/store');
+const auth = require('./lib/auth');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -23,43 +24,72 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.get('/api/dashboard', async (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
   try {
-    res.json(await store.getDashboard());
+    const result = await auth.signup(req.body);
+    auth.writeSession(res, result.session);
+    res.status(201).json(auth.publicUser(result.user));
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.get('/api/tasks', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
-    res.json(await store.getAll());
+    const result = await auth.login(req.body);
+    auth.writeSession(res, result.session);
+    res.json(auth.publicUser(result.user));
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.post('/api/tasks', async (req, res) => {
+app.post('/api/auth/logout', (req, res) => {
+  auth.clearSession(res);
+  res.status(204).end();
+});
+
+app.get('/api/auth/me', requireUser, (req, res) => {
+  res.json(auth.publicUser(req.user));
+});
+
+app.get('/api/dashboard', requireUser, async (req, res) => {
   try {
-    const task = await store.create(req.body);
+    res.json(await store.getDashboard(req.user));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get('/api/tasks', requireUser, async (req, res) => {
+  try {
+    res.json(await store.getAll(req.user));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post('/api/tasks', requireUser, async (req, res) => {
+  try {
+    const task = await store.create(req.user, req.body);
     res.status(201).json(task);
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.patch('/api/tasks/:id', async (req, res) => {
+app.patch('/api/tasks/:id', requireUser, async (req, res) => {
   try {
-    const task = await store.update(req.params.id, req.body);
+    const task = await store.update(req.user, req.params.id, req.body);
     res.json(task);
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.delete('/api/tasks/:id', async (req, res) => {
+app.delete('/api/tasks/:id', requireUser, async (req, res) => {
   try {
-    await store.remove(req.params.id);
+    await store.remove(req.user, req.params.id);
     res.status(204).end();
   } catch (error) {
     sendError(res, error);
@@ -83,6 +113,15 @@ app.use((error, req, res, next) => {
   }
   res.status(500).json({ message: '서버 오류가 발생했습니다.' });
 });
+
+async function requireUser(req, res, next) {
+  try {
+    req.user = await auth.resolveUser(req, res);
+    next();
+  } catch (error) {
+    sendError(res, error);
+  }
+}
 
 function sendError(res, error) {
   const status = error.status || 500;

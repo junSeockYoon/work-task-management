@@ -35,6 +35,49 @@
     </style>
   </head>
   <body class="min-h-screen font-sans text-slate-900 antialiased">
+    <p id="boot-status" class="px-4 py-16 text-center text-sm text-slate-500">로그인 상태를 확인하고 있습니다.</p>
+
+    <div id="auth-screen" class="hidden">
+      <div class="mx-auto flex min-h-screen max-w-md items-center px-4 py-16">
+        <div class="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="mb-6 flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-5 w-5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12.5 9.2 16.7 19 7" />
+              </svg>
+            </span>
+            <div>
+              <h1 id="auth-title" class="text-lg font-semibold tracking-tight">로그인</h1>
+              <p id="auth-lead" class="text-sm text-slate-500">아이디와 비밀번호로 들어옵니다.</p>
+            </div>
+          </div>
+
+          <form id="auth-form" class="space-y-4" novalidate>
+            <label class="block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">아이디</span>
+              <input id="auth-username" name="username" type="text" autocomplete="username" maxlength="20" placeholder="영문, 숫자, 밑줄 4~20자" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+            </label>
+            <label class="block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">비밀번호</span>
+              <input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="72" placeholder="8자 이상" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+            </label>
+            <label id="password-confirm-field" class="hidden block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">비밀번호 확인</span>
+              <input id="auth-password-confirm" type="password" autocomplete="new-password" maxlength="72" placeholder="비밀번호를 한 번 더 입력" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+            </label>
+            <label id="phone-field" class="hidden block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">전화번호</span>
+              <input id="auth-phone" name="tel" type="tel" autocomplete="tel" inputmode="numeric" maxlength="13" placeholder="01012345678" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+            </label>
+            <p id="auth-error" class="hidden text-sm text-rose-600"></p>
+            <button id="auth-submit" type="submit" class="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">로그인</button>
+          </form>
+          <button id="auth-switch" type="button" class="mt-4 text-sm font-medium text-slate-500 hover:text-slate-800">계정이 없나요? 회원가입</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="workspace" class="hidden">
     <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
       <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-3">
@@ -50,6 +93,8 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <p id="account-name" class="hidden text-sm text-slate-500"></p>
+          <button id="logout-button" type="button" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">로그아웃</button>
           <div class="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="화면 전환">
             <button type="button" data-view-tab="board" class="rounded-lg bg-white px-3.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm" aria-pressed="true">보드</button>
             <button type="button" data-view-tab="history" class="rounded-lg px-3.5 py-1.5 text-sm font-medium text-slate-500" aria-pressed="false">완료 기록</button>
@@ -92,6 +137,7 @@
 
       <div id="view-history" class="mt-8 hidden"></div>
     </main>
+    </div>
 
     <div id="modal" class="fixed inset-0 z-40 hidden" aria-hidden="true">
       <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"></div>

@@ -47,12 +47,15 @@ async function api(url, options = {}) {
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers || {}),
   };
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers, credentials: 'include' });
   if (response.status === 204) return null;
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.message || '요청을 처리하지 못했습니다.');
+    const error = new Error(data.message || '요청을 처리하지 못했습니다.');
+    error.status = response.status;
+    if (response.status === 401 && !url.startsWith('/api/auth')) showAuth();
+    throw error;
   }
   return data;
 }
@@ -441,6 +444,7 @@ async function refresh() {
     render();
     return true;
   } catch (error) {
+    if (error.status === 401) return false;
     if (!state.dashboard) showLoadError();
     else toast(errorMessage(error));
     return false;
@@ -640,6 +644,109 @@ function onClick(event) {
   if (action === 'reopen') updateStatus(id, 'todo', '할 일로 되돌렸습니다.', 'board');
 }
 
+const authMode = { value: 'login' };
+
+function showAuthError(message) {
+  const element = document.getElementById('auth-error');
+  element.textContent = message;
+  element.classList.remove('hidden');
+}
+
+function hideAuthError() {
+  const element = document.getElementById('auth-error');
+  element.textContent = '';
+  element.classList.add('hidden');
+}
+
+function setAuthMode(mode) {
+  authMode.value = mode === 'signup' ? 'signup' : 'login';
+  const signup = authMode.value === 'signup';
+  document.getElementById('auth-title').textContent = signup ? '회원가입' : '로그인';
+  document.getElementById('auth-lead').textContent = signup
+    ? '아이디, 비밀번호, 전화번호만 있으면 됩니다.'
+    : '아이디와 비밀번호로 들어옵니다.';
+  document.getElementById('phone-field').classList.toggle('hidden', !signup);
+  document.getElementById('password-confirm-field').classList.toggle('hidden', !signup);
+  document.getElementById('auth-password').autocomplete = signup ? 'new-password' : 'current-password';
+  document.getElementById('auth-submit').textContent = signup ? '가입하고 시작' : '로그인';
+  document.getElementById('auth-switch').textContent = signup ? '이미 계정이 있나요? 로그인' : '계정이 없나요? 회원가입';
+  hideAuthError();
+}
+
+function showAuth() {
+  state.user = null;
+  state.dashboard = null;
+  document.getElementById('boot-status').classList.add('hidden');
+  document.getElementById('workspace').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('add-button').disabled = true;
+  document.getElementById('account-name').classList.add('hidden');
+  document.getElementById('logout-button').classList.add('hidden');
+}
+
+function showApp(user) {
+  state.user = user;
+  document.getElementById('boot-status').classList.add('hidden');
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('workspace').classList.remove('hidden');
+  const name = document.getElementById('account-name');
+  name.textContent = user.username;
+  name.classList.remove('hidden');
+  document.getElementById('logout-button').classList.remove('hidden');
+}
+
+async function onAuthSubmit(event) {
+  event.preventDefault();
+  hideAuthError();
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const confirm = document.getElementById('auth-password-confirm').value;
+  const phone = document.getElementById('auth-phone').value.trim();
+  if (authMode.value === 'signup' && password !== confirm) {
+    showAuthError('비밀번호가 서로 다릅니다.');
+    return;
+  }
+
+  const button = document.getElementById('auth-submit');
+  const signup = authMode.value === 'signup';
+  button.disabled = true;
+  button.textContent = signup ? '가입 중' : '로그인 중';
+  try {
+    const user = await api(signup ? '/api/auth/signup' : '/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(signup ? { username, password, phone } : { username, password }),
+    });
+    showApp(user);
+    const ok = await refresh();
+    if (ok) toast(signup ? '가입했습니다.' : '로그인했습니다.');
+  } catch (error) {
+    showAuthError(errorMessage(error));
+  } finally {
+    button.disabled = false;
+    button.textContent = signup ? '가입하고 시작' : '로그인';
+  }
+}
+
+async function logout() {
+  try {
+    await api('/api/auth/logout', { method: 'POST' });
+  } catch (error) {
+    toast(errorMessage(error));
+  }
+  showAuth();
+}
+
+async function boot() {
+  try {
+    const me = await api('/api/auth/me');
+    showApp(me);
+    await refresh();
+  } catch (error) {
+    showAuth();
+    if (error.status !== 401) showAuthError(errorMessage(error));
+  }
+}
+
 function init() {
   document.getElementById('add-button').addEventListener('click', () => openModal());
   document.getElementById('task-form').addEventListener('submit', onSubmit);
@@ -688,8 +795,14 @@ function init() {
     if (!document.getElementById('modal').classList.contains('hidden')) closeModal();
   });
 
+  document.getElementById('auth-form').addEventListener('submit', onAuthSubmit);
+  document.getElementById('auth-switch').addEventListener('click', () => {
+    setAuthMode(authMode.value === 'signup' ? 'login' : 'signup');
+  });
+  document.getElementById('logout-button').addEventListener('click', logout);
+
   setPriority('Medium');
-  refresh();
+  boot();
 }
 
 init();
