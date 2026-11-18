@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const store = require('./lib/store');
@@ -12,39 +14,52 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true });
-});
-
-app.get('/api/dashboard', (req, res) => {
-  res.json(store.getDashboard());
-});
-
-app.get('/api/tasks', (req, res) => {
-  res.json(store.getAll());
-});
-
-app.post('/api/tasks', (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
-    const task = store.create(req.body);
+    await store.ping();
+    res.json({ ok: true });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    res.json(await store.getDashboard());
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get('/api/tasks', async (req, res) => {
+  try {
+    res.json(await store.getAll());
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post('/api/tasks', async (req, res) => {
+  try {
+    const task = await store.create(req.body);
     res.status(201).json(task);
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.patch('/api/tasks/:id', (req, res) => {
+app.patch('/api/tasks/:id', async (req, res) => {
   try {
-    const task = store.update(req.params.id, req.body);
+    const task = await store.update(req.params.id, req.body);
     res.json(task);
   } catch (error) {
     sendError(res, error);
   }
 });
 
-app.delete('/api/tasks/:id', (req, res) => {
+app.delete('/api/tasks/:id', async (req, res) => {
   try {
-    store.remove(req.params.id);
+    await store.remove(req.params.id);
     res.status(204).end();
   } catch (error) {
     sendError(res, error);
@@ -71,7 +86,7 @@ app.use((error, req, res, next) => {
 
 function sendError(res, error) {
   const status = error.status || 500;
-  const message = status >= 500 ? '서버 오류가 발생했습니다.' : error.message;
+  const message = error.status ? error.message : '서버 오류가 발생했습니다.';
   res.status(status).json({ message });
 }
 
@@ -80,9 +95,6 @@ module.exports = app;
 if (require.main === module && !process.env.VERCEL) {
   const server = app.listen(PORT, () => {
     console.log(`업무일지 서버 실행 중: http://localhost:${PORT}`);
-    if (store.wasSeeded()) {
-      console.log('data/tasks.json 파일을 초기 업무 데이터로 만들었습니다.');
-    }
   });
 
   server.on('error', (error) => {
