@@ -1,4 +1,4 @@
--- 마감 시각(선택). Google Calendar 연동 전에 실행하세요.
+-- 마감 시각(선택).
 -- Supabase SQL Editor 에서 이 파일 전체를 한 번 실행하세요.
 
 alter table public.tasks
