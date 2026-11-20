@@ -7,7 +7,14 @@ const state = {
   onConfirm: null,
   query: '',
   formChecks: [],
+  expandedColumns: {},
+  laterOpen: false,
+  historyOlderOpen: false,
+  expandedHistoryDates: {},
 };
+
+const COLUMN_PREVIEW = 5;
+const HISTORY_RECENT_DAYS = 7;
 
 const PRIORITY_META = {
   High: { label: '높음', className: 'bg-rose-50 text-rose-700 ring-rose-600/10' },
@@ -212,11 +219,30 @@ function renderBoardCard(task) {
   `;
 }
 
+function diffDaysClient(fromYmd, toYmd) {
+  const [fromYear, fromMonth, fromDay] = fromYmd.split('-').map(Number);
+  const [toYear, toMonth, toDay] = toYmd.split('-').map(Number);
+  return Math.round((Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86400000);
+}
+
+function isSearching() {
+  return Boolean(state.query.trim());
+}
+
 function renderColumn({ column, kicker, kickerClass, title, subtitle, tasks, emptyText, countClass }) {
+  const expanded = Boolean(state.expandedColumns[column]) || isSearching();
+  const hiddenCount = !expanded && tasks.length > COLUMN_PREVIEW ? tasks.length - COLUMN_PREVIEW : 0;
+  const shown = hiddenCount ? tasks.slice(0, COLUMN_PREVIEW) : tasks;
   const body = tasks.length
-    ? tasks.map(renderBoardCard).join('')
+    ? shown.map(renderBoardCard).join('')
     : `<div class="rounded-xl border border-dashed border-slate-300/80 bg-white/50 px-4 py-10 text-center text-sm text-slate-400">${emptyText}</div>`;
   const countTone = tasks.length ? countClass : 'bg-slate-100 text-slate-500';
+  const more =
+    hiddenCount > 0
+      ? `<button type="button" data-action="expand-column" data-column="${column}" class="w-full rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-white">나머지 ${hiddenCount}건 더 보기</button>`
+      : expanded && tasks.length > COLUMN_PREVIEW && !isSearching()
+        ? `<button type="button" data-action="collapse-column" data-column="${column}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50">접기</button>`
+        : '';
 
   return `
     <section data-column="${column}">
@@ -228,7 +254,7 @@ function renderColumn({ column, kicker, kickerClass, title, subtitle, tasks, emp
         </div>
         <span class="mt-1 inline-flex min-w-7 items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${countTone}">${tasks.length}</span>
       </header>
-      <div class="space-y-3">${body}</div>
+      <div class="space-y-3">${body}${more}</div>
     </section>
   `;
 }
@@ -274,19 +300,35 @@ function banner(className, kicker, message) {
 function renderLater(data) {
   const tasks = visibleTasks(data.later);
   if (!tasks.length) return '';
+  const open = state.laterOpen || isSearching();
+  const expanded = Boolean(state.expandedColumns.later) || isSearching();
+  const hiddenCount = open && !expanded && tasks.length > COLUMN_PREVIEW ? tasks.length - COLUMN_PREVIEW : 0;
+  const shown = open ? (hiddenCount ? tasks.slice(0, COLUMN_PREVIEW) : tasks) : [];
+  const more =
+    hiddenCount > 0
+      ? `<button type="button" data-action="expand-column" data-column="later" class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-white">나머지 ${hiddenCount}건 더 보기</button>`
+      : open && expanded && tasks.length > COLUMN_PREVIEW && !isSearching()
+        ? `<button type="button" data-action="collapse-column" data-column="later" class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50">접기</button>`
+        : '';
+
   return `
     <section class="mt-12" data-column="later">
-      <header class="mb-3 flex items-end justify-between gap-3 px-1">
+      <button type="button" data-action="toggle-later" class="mb-3 flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-slate-50" aria-expanded="${open ? 'true' : 'false'}">
         <div>
           <p class="text-xs font-semibold tracking-widest text-slate-400">LATER</p>
-          <h2 class="mt-1 text-base font-semibold text-slate-900">이후 일정</h2>
-          <p class="mt-0.5 text-xs text-slate-400">4일 후부터 마감인 업무</p>
+          <h2 class="mt-1 text-base font-semibold text-slate-900">이후 일정 ${tasks.length}건</h2>
+          <p class="mt-0.5 text-xs text-slate-400">${open ? '4일 후부터 마감인 업무' : '눌러서 펼치기 · 4일 후부터 마감'}</p>
         </div>
-        <span class="text-xs font-semibold text-slate-500">${tasks.length}건</span>
-      </header>
-      <div class="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-        ${tasks.map(renderBoardCard).join('')}
-      </div>
+        <span class="text-sm font-medium text-slate-500">${open ? '접기' : '펼치기'}</span>
+      </button>
+      ${
+        open
+          ? `<div class="space-y-3">
+              <div class="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">${shown.map(renderBoardCard).join('')}</div>
+              ${more}
+            </div>`
+          : ''
+      }
     </section>
   `;
 }
@@ -365,7 +407,41 @@ function renderHistoryCard(task) {
   `;
 }
 
+function isRecentHistoryGroup(group, today) {
+  if (!group.date) return false;
+  const ago = diffDaysClient(group.date, today);
+  return ago >= 0 && ago <= HISTORY_RECENT_DAYS;
+}
+
+function isHistoryGroupOpen(group, today) {
+  const key = group.date || 'unknown';
+  if (Object.prototype.hasOwnProperty.call(state.expandedHistoryDates, key)) {
+    return Boolean(state.expandedHistoryDates[key]);
+  }
+  return group.date === today || isSearching();
+}
+
+function renderHistoryGroup(group, today) {
+  const key = group.date || 'unknown';
+  const open = isHistoryGroupOpen(group, today);
+  const heading = group.relativeLabel || group.dateLabel;
+  const sub = group.relativeLabel ? escapeHtml(group.dateLabel) : '';
+  return `
+    <section class="mb-4" data-history-date="${escapeHtml(key)}">
+      <button type="button" data-action="toggle-history" data-date="${escapeHtml(key)}" class="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-slate-50" aria-expanded="${open ? 'true' : 'false'}">
+        <div class="min-w-0">
+          <h3 class="text-base font-semibold text-slate-900">${escapeHtml(heading)}</h3>
+          ${sub ? `<p class="mt-0.5 text-sm text-slate-400">${sub}</p>` : ''}
+        </div>
+        <p class="ml-auto shrink-0 text-xs text-slate-400">${group.tasks.length}건 · ${open ? '접기' : '펼치기'}</p>
+      </button>
+      ${open ? `<div class="mt-3 space-y-3">${group.tasks.map(renderHistoryCard).join('')}</div>` : ''}
+    </section>
+  `;
+}
+
 function renderHistory() {
+  const today = state.dashboard.today;
   const groups = state.dashboard.history
     .map((group) => ({ ...group, tasks: visibleTasks(group.tasks) }))
     .filter((group) => group.tasks.length);
@@ -390,31 +466,27 @@ function renderHistory() {
     return;
   }
 
-  const sections = groups
-    .map((group) => {
-      const heading = group.relativeLabel || group.dateLabel;
-      const sub = group.relativeLabel ? `<p class="text-sm text-slate-400">${escapeHtml(group.dateLabel)}</p>` : '';
-      return `
-        <section class="mb-8" data-history-date="${escapeHtml(group.date || '')}">
-          <div class="mb-3 flex items-baseline gap-3">
-            <h3 class="text-base font-semibold text-slate-900">${escapeHtml(heading)}</h3>
-            ${sub}
-            <p class="ml-auto text-xs text-slate-400">${group.tasks.length}건</p>
-          </div>
-          <div class="space-y-3">${group.tasks.map(renderHistoryCard).join('')}</div>
-        </section>
-      `;
-    })
-    .join('');
+  const recent = groups.filter((group) => isRecentHistoryGroup(group, today));
+  const older = groups.filter((group) => !isRecentHistoryGroup(group, today));
+  const showOlder = state.historyOlderOpen || isSearching();
+  const olderCount = older.reduce((sum, group) => sum + group.tasks.length, 0);
+  const sections = (showOlder ? groups : recent).map((group) => renderHistoryGroup(group, today)).join('');
+  const olderToggle =
+    older.length && !isSearching()
+      ? showOlder
+        ? `<button type="button" data-action="hide-older-history" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50">이전 기록 접기</button>`
+        : `<button type="button" data-action="show-older-history" class="mt-2 w-full rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-white">이전 기록 ${olderCount}건 더 보기</button>`
+      : '';
 
   document.getElementById('view-history').innerHTML = `
     <div class="mx-auto max-w-3xl">
       <header class="mb-6">
         <p class="text-xs font-semibold tracking-widest text-slate-400">HISTORY</p>
         <h2 class="mt-1 text-xl font-semibold tracking-tight">완료 기록</h2>
-        <p class="mt-1 text-sm text-slate-500">끝낸 일을 완료일 기준으로 모아 둡니다. 총 ${total}건.</p>
+        <p class="mt-1 text-sm text-slate-500">최근 ${HISTORY_RECENT_DAYS}일부터 먼저 보여 줍니다. 총 ${total}건.</p>
       </header>
-      ${sections}
+      ${sections || `<div class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-slate-500">최근 ${HISTORY_RECENT_DAYS}일 기록이 없습니다.</div>`}
+      ${olderToggle}
     </div>
   `;
 }
@@ -773,6 +845,41 @@ function onClick(event) {
 
   if (action === 'retry') {
     refresh();
+    return;
+  }
+  if (action === 'expand-column') {
+    state.expandedColumns[button.dataset.column] = true;
+    render();
+    return;
+  }
+  if (action === 'collapse-column') {
+    state.expandedColumns[button.dataset.column] = false;
+    render();
+    return;
+  }
+  if (action === 'toggle-later') {
+    state.laterOpen = !state.laterOpen;
+    render();
+    return;
+  }
+  if (action === 'show-older-history') {
+    state.historyOlderOpen = true;
+    render();
+    return;
+  }
+  if (action === 'hide-older-history') {
+    state.historyOlderOpen = false;
+    render();
+    return;
+  }
+  if (action === 'toggle-history') {
+    const key = button.dataset.date || 'unknown';
+    const today = state.dashboard?.today;
+    const current = Object.prototype.hasOwnProperty.call(state.expandedHistoryDates, key)
+      ? Boolean(state.expandedHistoryDates[key])
+      : key === today || isSearching();
+    state.expandedHistoryDates[key] = !current;
+    render();
     return;
   }
 
