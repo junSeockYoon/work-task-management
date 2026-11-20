@@ -5,6 +5,8 @@ const state = {
   priority: 'Medium',
   saving: false,
   onConfirm: null,
+  query: '',
+  formChecks: [],
 };
 
 const PRIORITY_META = {
@@ -201,6 +203,7 @@ function renderBoardCard(task) {
         <div class="mt-3 flex flex-wrap items-center gap-2">
           ${dueBadge(task)}
           ${dateLabel}
+          ${taskFoot(task)}
           <span class="ml-auto text-xs font-medium text-slate-400">자세히</span>
         </div>
       </button>
@@ -269,7 +272,8 @@ function banner(className, kicker, message) {
 }
 
 function renderLater(data) {
-  if (!data.later.length) return '';
+  const tasks = visibleTasks(data.later);
+  if (!tasks.length) return '';
   return `
     <section class="mt-12" data-column="later">
       <header class="mb-3 flex items-end justify-between gap-3 px-1">
@@ -278,10 +282,10 @@ function renderLater(data) {
           <h2 class="mt-1 text-base font-semibold text-slate-900">이후 일정</h2>
           <p class="mt-0.5 text-xs text-slate-400">4일 후부터 마감인 업무</p>
         </div>
-        <span class="text-xs font-semibold text-slate-500">${data.later.length}건</span>
+        <span class="text-xs font-semibold text-slate-500">${tasks.length}건</span>
       </header>
       <div class="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-        ${data.later.map(renderBoardCard).join('')}
+        ${tasks.map(renderBoardCard).join('')}
       </div>
     </section>
   `;
@@ -298,8 +302,8 @@ function renderBoard() {
         kickerClass: 'text-rose-500',
         title: '지난 일정',
         subtitle: '마감일이 지난 업무',
-        tasks: data.overdue,
-        emptyText: '밀린 업무가 없습니다',
+        tasks: visibleTasks(data.overdue),
+        emptyText: state.query.trim() ? '검색 결과가 없습니다' : '밀린 업무가 없습니다',
         countClass: 'bg-rose-50 text-rose-700',
       })}
       ${renderColumn({
@@ -308,8 +312,8 @@ function renderBoard() {
         kickerClass: 'text-amber-600',
         title: '오늘',
         subtitle: '오늘 마감인 업무',
-        tasks: data.todayTasks,
-        emptyText: '오늘 마감인 업무가 없습니다',
+        tasks: visibleTasks(data.todayTasks),
+        emptyText: state.query.trim() ? '검색 결과가 없습니다' : '오늘 마감인 업무가 없습니다',
         countClass: 'bg-amber-50 text-amber-800',
       })}
       ${renderColumn({
@@ -318,8 +322,8 @@ function renderBoard() {
         kickerClass: 'text-emerald-600',
         title: '앞으로 3일',
         subtitle: data.upcomingLabel,
-        tasks: data.upcoming,
-        emptyText: '3일 안에 마감인 업무가 없습니다',
+        tasks: visibleTasks(data.upcoming),
+        emptyText: state.query.trim() ? '검색 결과가 없습니다' : '3일 안에 마감인 업무가 없습니다',
         countClass: 'bg-emerald-50 text-emerald-700',
       })}
     </div>
@@ -348,7 +352,7 @@ function renderHistoryCard(task) {
             <div class="flex flex-wrap items-center gap-1.5">${priorityBadge(task.priority)}</div>
             <h3 class="mt-2 break-words text-sm font-semibold leading-6 text-slate-900">${escapeHtml(task.title)}</h3>
             ${description}
-            <p class="mt-2 text-xs text-slate-400">${meta} · 자세히</p>
+            <p class="mt-2 text-xs text-slate-400">${meta}${taskFootText(task) ? ` · ${escapeHtml(taskFootText(task))}` : ''} · 자세히</p>
           </button>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" data-action="edit" data-id="${escapeHtml(task.id)}" class="text-xs font-medium text-slate-500 hover:text-slate-800">수정</button>
@@ -362,10 +366,21 @@ function renderHistoryCard(task) {
 }
 
 function renderHistory() {
-  const groups = state.dashboard.history;
+  const groups = state.dashboard.history
+    .map((group) => ({ ...group, tasks: visibleTasks(group.tasks) }))
+    .filter((group) => group.tasks.length);
   const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
 
   if (!total) {
+    if (state.query.trim()) {
+      document.getElementById('view-history').innerHTML = `
+        <div class="mx-auto max-w-3xl rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
+          <p class="text-base font-semibold text-slate-900">검색 결과가 없습니다</p>
+          <p class="mt-2 text-sm text-slate-500">다른 단어로 제목, 내용, 체크 항목을 찾아 보세요.</p>
+        </div>
+      `;
+      return;
+    }
     document.getElementById('view-history').innerHTML = `
       <div class="mx-auto max-w-3xl rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
         <p class="text-base font-semibold text-slate-900">완료 기록이 없습니다</p>
@@ -456,14 +471,31 @@ async function refresh() {
   }
 }
 
-function toast(message) {
+function toast(message, action) {
   const element = document.getElementById('toast');
-  element.textContent = message;
+  element.replaceChildren();
+  const text = document.createElement('span');
+  text.textContent = message;
+  element.appendChild(text);
+  if (action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = action.label;
+    button.className = 'ml-3 font-semibold underline';
+    button.addEventListener('click', () => {
+      element.classList.add('translate-y-2', 'opacity-0', 'pointer-events-none');
+      action.onClick();
+    });
+    element.appendChild(button);
+    element.classList.remove('pointer-events-none');
+  } else {
+    element.classList.add('pointer-events-none');
+  }
   element.classList.remove('translate-y-2', 'opacity-0');
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => {
-    element.classList.add('translate-y-2', 'opacity-0');
-  }, 2400);
+    element.classList.add('translate-y-2', 'opacity-0', 'pointer-events-none');
+  }, action ? 7000 : 2400);
 }
 
 function setPriority(priority) {
@@ -494,6 +526,10 @@ function openModal(task) {
   document.getElementById('title-input').value = task ? task.title : '';
   document.getElementById('description-input').value = task ? task.description || '' : '';
   document.getElementById('due-input').value = task ? task.dueDate || '' : state.dashboard?.today || '';
+  document.getElementById('repeat-input').value = task && REPEAT_LABEL[task.repeat] ? task.repeat : 'none';
+  document.getElementById('check-input').value = '';
+  state.formChecks = (task && task.checks ? task.checks : []).map((item) => ({ ...item }));
+  renderFormChecks();
   setPriority(task ? task.priority : 'Medium');
   hideFormError();
 
@@ -515,6 +551,32 @@ function closeModal() {
 }
 
 const STATUS_LABEL = { todo: '할 일', 'in-progress': '진행 중', done: '완료' };
+const REPEAT_LABEL = { daily: '매일', weekly: '매주', monthly: '매월' };
+
+function visibleTasks(tasks) {
+  const query = state.query.trim().toLowerCase();
+  if (!query) return tasks;
+  return tasks.filter((task) => {
+    const text = [task.title, task.description, ...(task.checks || []).map((item) => item.label)].join('\n').toLowerCase();
+    return text.includes(query);
+  });
+}
+
+function taskFootText(task) {
+  const bits = [];
+  if (task.checks && task.checks.length) {
+    const done = task.checks.filter((item) => item.done).length;
+    bits.push(`체크 ${done}/${task.checks.length}`);
+  }
+  if (REPEAT_LABEL[task.repeat]) bits.push(REPEAT_LABEL[task.repeat]);
+  return bits.join(' · ');
+}
+
+function taskFoot(task) {
+  const text = taskFootText(task);
+  if (!text) return '';
+  return `<span class="text-xs text-slate-400">${escapeHtml(text)}</span>`;
+}
 
 function openDetail(task) {
   state.detailId = task.id;
@@ -527,7 +589,25 @@ function openDetail(task) {
   const bits = [];
   if (task.dueDateLabel) bits.push(`마감 ${task.dueDateLabel}`);
   if (task.completedTimeLabel) bits.push(`${task.completedTimeLabel} 완료`);
+  if (REPEAT_LABEL[task.repeat]) bits.push(REPEAT_LABEL[task.repeat]);
   document.getElementById('detail-meta').textContent = bits.join(' · ');
+  const checks = document.getElementById('detail-checks');
+  if (task.checks && task.checks.length) {
+    checks.classList.remove('hidden');
+    checks.innerHTML = task.checks
+      .map(
+        (item) => `
+          <button type="button" data-action="toggle-check" data-id="${escapeHtml(task.id)}" data-check="${escapeHtml(item.id)}" class="flex w-full items-start gap-2 rounded-lg px-1 py-1.5 text-left text-sm hover:bg-slate-50 ${item.done ? 'text-slate-400 line-through' : 'text-slate-700'}">
+            <span class="mt-0.5 h-4 w-4 shrink-0 rounded border ${item.done ? 'border-slate-900 bg-slate-900' : 'border-slate-300 bg-white'}"></span>
+            <span>${escapeHtml(item.label)}</span>
+          </button>
+        `
+      )
+      .join('');
+  } else {
+    checks.classList.add('hidden');
+    checks.innerHTML = '';
+  }
   const body = document.getElementById('detail-body');
   const empty = !task.description;
   body.textContent = empty ? '상세 내용이 없습니다.' : task.description;
@@ -609,6 +689,8 @@ async function onSubmit(event) {
     description: document.getElementById('description-input').value.trim(),
     dueDate: document.getElementById('due-input').value,
     priority: state.priority,
+    repeat: document.getElementById('repeat-input').value,
+    checks: currentFormChecks(),
   };
 
   const submit = document.getElementById('submit-button');
@@ -654,12 +736,25 @@ function requestDelete(task) {
   closeDetail();
   openConfirm({
     title: '업무를 삭제할까요?',
-    body: `「${task.title}」 업무를 삭제합니다. 삭제한 뒤에는 되돌릴 수 없습니다.`,
+    body: `「${task.title}」 업무를 삭제합니다. 삭제한 직후에는 되돌릴 수 있습니다.`,
     onConfirm: async () => {
       await api(`/api/tasks/${task.id}`, { method: 'DELETE' });
       closeModal();
       const ok = await refresh();
-      if (ok) toast('업무를 삭제했습니다.');
+      if (ok) {
+        toast('업무를 삭제했습니다.', {
+          label: '되돌리기',
+          onClick: async () => {
+            try {
+              await api(`/api/tasks/${task.id}/restore`, { method: 'POST' });
+              const restored = await refresh();
+              if (restored) toast('삭제를 취소했습니다.');
+            } catch (error) {
+              toast(errorMessage(error));
+            }
+          },
+        });
+      }
     },
   });
 }
@@ -689,10 +784,11 @@ function onClick(event) {
   }
 
   if (action === 'open') openDetail(task);
+  if (action === 'toggle-check') toggleCheck(task, button.dataset.check);
   if (action === 'edit') openModal(task);
   if (action === 'delete') requestDelete(task);
   if (action === 'start') updateStatus(id, 'in-progress', '진행 중으로 바꿨습니다.');
-  if (action === 'complete') updateStatus(id, 'done', '완료 기록으로 옮겼습니다.');
+  if (action === 'complete') updateStatus(id, 'done', doneMessage(task));
   if (action === 'reopen') updateStatus(id, 'todo', '할 일로 되돌렸습니다.', 'board');
 }
 
@@ -801,6 +897,61 @@ async function boot() {
   }
 }
 
+function renderFormChecks() {
+  const host = document.getElementById('check-list');
+  host.innerHTML = state.formChecks
+    .map(
+      (item, index) => `
+        <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+          <span class="min-w-0 flex-1 truncate text-sm text-slate-700">${escapeHtml(item.label)}</span>
+          <button type="button" data-check-remove="${index}" class="text-xs font-medium text-slate-400 hover:text-rose-600">빼기</button>
+        </div>
+      `
+    )
+    .join('');
+}
+
+function currentFormChecks() {
+  const pending = document.getElementById('check-input').value.trim();
+  const checks = state.formChecks.map((item) => ({ id: item.id, label: item.label, done: Boolean(item.done) }));
+  if (pending) checks.push({ label: pending, done: false });
+  return checks;
+}
+
+function addFormCheck() {
+  const input = document.getElementById('check-input');
+  const label = input.value.trim();
+  if (!label) return;
+  if (state.formChecks.length >= 30) {
+    showFormError('체크 항목은 30개까지 넣을 수 있습니다.');
+    return;
+  }
+  hideFormError();
+  state.formChecks.push({ id: crypto.randomUUID(), label, done: false });
+  input.value = '';
+  renderFormChecks();
+}
+
+function doneMessage(task) {
+  if (task && task.repeat && task.repeat !== 'none') return '완료했습니다. 다음 반복 일정을 만들었습니다.';
+  return '완료 기록으로 옮겼습니다.';
+}
+
+async function toggleCheck(task, checkId) {
+  const checks = (task.checks || []).map((item) => (item.id === checkId ? { ...item, done: !item.done } : item));
+  try {
+    await api(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ checks }),
+    });
+    const ok = await refresh();
+    const next = findTask(task.id);
+    if (ok && next && state.detailId === task.id) openDetail(next);
+  } catch (error) {
+    toast(errorMessage(error));
+  }
+}
+
 function init() {
   document.getElementById('add-button').addEventListener('click', () => openModal());
   document.getElementById('task-form').addEventListener('submit', onSubmit);
@@ -882,7 +1033,24 @@ function init() {
     if (!task) return;
     const kind = document.getElementById('detail-primary').dataset.kind;
     if (kind === 'reopen') updateStatus(task.id, 'todo', '할 일로 되돌렸습니다.', 'board');
-    else updateStatus(task.id, 'done', '완료 기록으로 옮겼습니다.');
+    else updateStatus(task.id, 'done', doneMessage(task));
+  });
+  document.getElementById('search-input').addEventListener('input', (event) => {
+    state.query = event.target.value;
+    render();
+  });
+  document.getElementById('check-add').addEventListener('click', addFormCheck);
+  document.getElementById('check-input').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    addFormCheck();
+  });
+  document.getElementById('check-list').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-check-remove]');
+    if (!button) return;
+    const index = Number(button.dataset.checkRemove);
+    state.formChecks = state.formChecks.filter((_, itemIndex) => itemIndex !== index);
+    renderFormChecks();
   });
 
   setPriority('Medium');

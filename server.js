@@ -88,6 +88,14 @@ app.patch('/api/tasks/:id', requireUser, async (req, res) => {
   }
 });
 
+app.post('/api/tasks/:id/restore', requireUser, async (req, res) => {
+  try {
+    res.json(await store.restore(req.user, req.params.id));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 app.delete('/api/tasks/:id', requireUser, async (req, res) => {
   try {
     await store.remove(req.user, req.params.id);

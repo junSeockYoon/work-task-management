@@ -85,6 +85,7 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <input id="search-input" type="search" placeholder="업무 검색" class="w-36 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-44" />
           <p id="account-name" class="hidden text-sm text-slate-500"></p>
           <button id="logout-button" type="button" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">로그아웃</button>
           <div class="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="화면 전환">
@@ -159,6 +160,25 @@
                 <textarea id="description-input" rows="3" maxlength="2000" placeholder="하면 되는 일을 조금만 더 적어 두세요. 비워도 됩니다." class="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"></textarea>
               </label>
 
+              <div>
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">체크리스트</span>
+                <div id="check-list" class="space-y-2"></div>
+                <div class="mt-2 flex gap-2">
+                  <input id="check-input" type="text" maxlength="120" placeholder="항목을 적고 추가" class="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+                  <button id="check-add" type="button" class="rounded-lg bg-white px-3 py-2 text-sm font-medium text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50">추가</button>
+                </div>
+              </div>
+
+              <label class="block">
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">반복</span>
+                <select id="repeat-input" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                  <option value="none">없음</option>
+                  <option value="daily">매일</option>
+                  <option value="weekly">매주</option>
+                  <option value="monthly">매월</option>
+                </select>
+              </label>
+
               <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block">
                   <span class="mb-1.5 block text-sm font-medium text-slate-700">마감일 <span class="text-rose-500">*</span></span>
@@ -207,6 +227,7 @@
             </button>
           </div>
           <div class="detail-scroll overflow-y-auto px-5 py-4">
+            <div id="detail-checks" class="mb-4 space-y-1"></div>
             <p id="detail-body" class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700"></p>
           </div>
           <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-4">
