@@ -6,6 +6,8 @@ const state = {
   saving: false,
   onConfirm: null,
   query: '',
+  historyFrom: '',
+  historyTo: '',
   formChecks: [],
   expandedColumns: {},
   laterOpen: false,
@@ -229,6 +231,42 @@ function isSearching() {
   return Boolean(state.query.trim());
 }
 
+function historyDateFilterActive() {
+  return Boolean(state.historyFrom || state.historyTo);
+}
+
+function isHistoryFiltering() {
+  return isSearching() || historyDateFilterActive();
+}
+
+function historyRange() {
+  let from = state.historyFrom || '';
+  let to = state.historyTo || '';
+  if (from && to && from > to) {
+    const swap = from;
+    from = to;
+    to = swap;
+  }
+  return { from, to };
+}
+
+function groupInHistoryRange(group) {
+  if (!historyDateFilterActive()) return true;
+  if (!group.date) return false;
+  const { from, to } = historyRange();
+  if (from && group.date < from) return false;
+  if (to && group.date > to) return false;
+  return true;
+}
+
+function syncHistoryDateInputs() {
+  const from = document.getElementById('history-from');
+  const to = document.getElementById('history-to');
+  if (!from || !to) return;
+  if (from.value !== state.historyFrom) from.value = state.historyFrom;
+  if (to.value !== state.historyTo) to.value = state.historyTo;
+}
+
 function renderColumn({ column, kicker, kickerClass, title, subtitle, tasks, emptyText, countClass }) {
   const expanded = Boolean(state.expandedColumns[column]) || isSearching();
   const hiddenCount = !expanded && tasks.length > COLUMN_PREVIEW ? tasks.length - COLUMN_PREVIEW : 0;
@@ -418,7 +456,7 @@ function isHistoryGroupOpen(group, today) {
   if (Object.prototype.hasOwnProperty.call(state.expandedHistoryDates, key)) {
     return Boolean(state.expandedHistoryDates[key]);
   }
-  return group.date === today || isSearching();
+  return group.date === today || isHistoryFiltering();
 }
 
 function renderHistoryGroup(group, today) {
@@ -441,24 +479,37 @@ function renderHistoryGroup(group, today) {
 }
 
 function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+  syncHistoryDateInputs();
+
   const today = state.dashboard.today;
+  const filtering = isHistoryFiltering();
   const groups = state.dashboard.history
     .map((group) => ({ ...group, tasks: visibleTasks(group.tasks) }))
-    .filter((group) => group.tasks.length);
+    .filter((group) => group.tasks.length)
+    .filter(groupInHistoryRange);
   const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
+  const { from, to } = historyRange();
+  const rangeLabel =
+    from && to ? `${from} ~ ${to}` : from ? `${from} 이후` : to ? `${to} 이전` : '';
 
   if (!total) {
-    if (state.query.trim()) {
-      document.getElementById('view-history').innerHTML = `
-        <div class="mx-auto max-w-3xl rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
+    if (filtering) {
+      list.innerHTML = `
+        <div class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
           <p class="text-base font-semibold text-slate-900">검색 결과가 없습니다</p>
-          <p class="mt-2 text-sm text-slate-500">다른 단어로 제목, 내용, 체크 항목을 찾아 보세요.</p>
+          <p class="mt-2 text-sm text-slate-500">${
+            historyDateFilterActive()
+              ? '기간이나 검색어를 바꿔 다시 찾아 보세요.'
+              : '다른 단어로 제목, 내용, 체크 항목을 찾아 보세요.'
+          }</p>
         </div>
       `;
       return;
     }
-    document.getElementById('view-history').innerHTML = `
-      <div class="mx-auto max-w-3xl rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
+    list.innerHTML = `
+      <div class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-16 text-center">
         <p class="text-base font-semibold text-slate-900">완료 기록이 없습니다</p>
         <p class="mt-2 text-sm text-slate-500">보드에서 업무를 완료하면 날짜별로 이곳에 쌓입니다.</p>
       </div>
@@ -468,26 +519,23 @@ function renderHistory() {
 
   const recent = groups.filter((group) => isRecentHistoryGroup(group, today));
   const older = groups.filter((group) => !isRecentHistoryGroup(group, today));
-  const showOlder = state.historyOlderOpen || isSearching();
+  const showOlder = state.historyOlderOpen || filtering;
   const olderCount = older.reduce((sum, group) => sum + group.tasks.length, 0);
   const sections = (showOlder ? groups : recent).map((group) => renderHistoryGroup(group, today)).join('');
   const olderToggle =
-    older.length && !isSearching()
+    older.length && !filtering
       ? showOlder
         ? `<button type="button" data-action="hide-older-history" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50">이전 기록 접기</button>`
         : `<button type="button" data-action="show-older-history" class="mt-2 w-full rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-white">이전 기록 ${olderCount}건 더 보기</button>`
       : '';
+  const summary = filtering
+    ? `${rangeLabel ? `기간 ${rangeLabel}` : '검색 결과'} · ${total}건`
+    : `최근 ${HISTORY_RECENT_DAYS}일부터 먼저 보여 줍니다. 총 ${total}건.`;
 
-  document.getElementById('view-history').innerHTML = `
-    <div class="mx-auto max-w-3xl">
-      <header class="mb-6">
-        <p class="text-xs font-semibold tracking-widest text-slate-400">HISTORY</p>
-        <h2 class="mt-1 text-xl font-semibold tracking-tight">완료 기록</h2>
-        <p class="mt-1 text-sm text-slate-500">최근 ${HISTORY_RECENT_DAYS}일부터 먼저 보여 줍니다. 총 ${total}건.</p>
-      </header>
-      ${sections || `<div class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-slate-500">최근 ${HISTORY_RECENT_DAYS}일 기록이 없습니다.</div>`}
-      ${olderToggle}
-    </div>
+  list.innerHTML = `
+    <p class="mb-4 text-sm text-slate-500">${escapeHtml(summary)}</p>
+    ${sections || `<div class="rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center text-sm text-slate-500">최근 ${HISTORY_RECENT_DAYS}일 기록이 없습니다.</div>`}
+    ${olderToggle}
   `;
 }
 
@@ -1144,6 +1192,21 @@ function init() {
   });
   document.getElementById('search-input').addEventListener('input', (event) => {
     state.query = event.target.value;
+    render();
+  });
+  document.getElementById('history-from').addEventListener('change', (event) => {
+    state.historyFrom = event.target.value || '';
+    if (state.view !== 'history') state.view = 'history';
+    render();
+  });
+  document.getElementById('history-to').addEventListener('change', (event) => {
+    state.historyTo = event.target.value || '';
+    if (state.view !== 'history') state.view = 'history';
+    render();
+  });
+  document.getElementById('history-clear-dates').addEventListener('click', () => {
+    state.historyFrom = '';
+    state.historyTo = '';
     render();
   });
   document.getElementById('check-add').addEventListener('click', addFormCheck);
