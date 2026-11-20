@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>이메일 인증</title>
+    <link rel="stylesheet" href="/app.css" />
+    <style>
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f4f5f7;
+        font-family: Pretendard, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+        color: #0f172a;
+      }
+      .card {
+        width: min(100%, 28rem);
+        margin: 1rem;
+        padding: 1.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        background: white;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1 class="text-lg font-semibold">이메일 인증</h1>
+      <p id="status" class="mt-2 text-sm text-slate-500">인증을 확인하고 있습니다.</p>
+    </div>
+    <script>
+      async function confirm(payload) {
+        const response = await fetch('/api/auth/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || '인증에 실패했습니다.');
+        return data;
+      }
+
+      async function run() {
+        const status = document.getElementById('status');
+        try {
+          const query = new URLSearchParams(window.location.search);
+          const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+          const tokenHash = query.get('token_hash') || hash.get('token_hash');
+          const type = query.get('type') || hash.get('type') || 'email';
+          const accessToken = hash.get('access_token') || query.get('access_token');
+          const refreshToken = hash.get('refresh_token') || query.get('refresh_token');
+          const expiresIn = hash.get('expires_in') || query.get('expires_in');
+
+          if (tokenHash) {
+            await confirm({ token_hash: tokenHash, type });
+          } else if (accessToken && refreshToken) {
+            await confirm({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+              expires_in: expiresIn,
+            });
+          } else {
+            throw new Error('인증 정보가 없습니다. 메일 링크를 다시 확인해 주세요.');
+          }
+
+          status.textContent = '인증이 완료되었습니다. 잠시 후 이동합니다.';
+          window.location.replace('/?confirmed=1');
+        } catch (error) {
+          status.textContent = error.message || '인증에 실패했습니다.';
+          status.className = 'mt-2 text-sm text-rose-600';
+        }
+      }
+
+      run();
+    </script>
+  </body>
+</html>

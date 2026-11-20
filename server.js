@@ -27,6 +27,14 @@ app.get('/api/health', async (req, res) => {
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const result = await auth.signup(req.body);
+    if (result.pendingConfirmation) {
+      res.status(201).json({
+        pendingConfirmation: true,
+        email: result.email,
+        message: '인증 메일을 보냈습니다. 메일함에서 확인한 뒤 로그인해 주세요.',
+      });
+      return;
+    }
     auth.writeSession(res, result.session);
     res.status(201).json(auth.publicUser(result.user));
   } catch (error) {
@@ -37,6 +45,28 @@ app.post('/api/auth/signup', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const result = await auth.login(req.body);
+    auth.writeSession(res, result.session);
+    res.json(auth.publicUser(result.user));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post('/api/auth/resend-confirmation', async (req, res) => {
+  try {
+    const result = await auth.resendConfirmation(req.body);
+    res.json({
+      email: result.email,
+      message: '인증 메일을 다시 보냈습니다.',
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post('/api/auth/confirm', async (req, res) => {
+  try {
+    const result = await auth.confirmEmail(req.body);
     auth.writeSession(res, result.session);
     res.json(auth.publicUser(result.user));
   } catch (error) {
@@ -118,6 +148,10 @@ app.use('/api', (req, res) => {
   res.status(404).json({ message: 'API를 찾을 수 없습니다.' });
 });
 
+app.get('/auth/callback', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth-callback.html'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((error, req, res, next) => {
@@ -144,7 +178,10 @@ async function requireUser(req, res, next) {
 function sendError(res, error) {
   const status = error.status || 500;
   const message = error.status ? error.message : '서버 오류가 발생했습니다.';
-  res.status(status).json({ message });
+  const body = { message };
+  if (error.code) body.code = error.code;
+  if (error.email) body.email = error.email;
+  res.status(status).json(body);
 }
 
 module.exports = app;

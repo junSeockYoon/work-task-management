@@ -65,6 +65,8 @@ async function api(url, options = {}) {
   if (!response.ok) {
     const error = new Error(data.message || '요청을 처리하지 못했습니다.');
     error.status = response.status;
+    error.code = data.code;
+    error.email = data.email;
     if (response.status === 401 && !url.startsWith('/api/auth')) showAuth();
     throw error;
   }
@@ -980,20 +982,36 @@ function hideAuthError() {
   element.classList.add('hidden');
 }
 
+function hideAuthPending() {
+  document.getElementById('auth-pending').classList.add('hidden');
+  document.getElementById('auth-pending-lead').textContent = '';
+}
+
+function showAuthPending(email, message) {
+  const pending = document.getElementById('auth-pending');
+  const lead = document.getElementById('auth-pending-lead');
+  lead.textContent =
+    message ||
+    `${email || '가입한 이메일'}로 인증 메일을 보냈습니다. 확인한 뒤 로그인해 주세요.`;
+  pending.dataset.email = email || '';
+  pending.classList.remove('hidden');
+}
+
 function setAuthMode(mode) {
   authMode.value = mode === 'signup' ? 'signup' : 'login';
   const signup = authMode.value === 'signup';
   document.getElementById('auth-title').textContent = signup ? '회원가입' : '로그인';
   document.getElementById('auth-lead').textContent = signup
-    ? '아이디, 비밀번호, 이메일, 전화번호를 입력해 주세요.'
+    ? '가입 후 이메일 인증이 필요합니다.'
     : '아이디와 비밀번호로 들어옵니다.';
   document.getElementById('email-field').classList.toggle('hidden', !signup);
   document.getElementById('phone-field').classList.toggle('hidden', !signup);
   document.getElementById('password-confirm-field').classList.toggle('hidden', !signup);
   document.getElementById('auth-password').autocomplete = signup ? 'new-password' : 'current-password';
-  document.getElementById('auth-submit').textContent = signup ? '가입하고 시작' : '로그인';
+  document.getElementById('auth-submit').textContent = signup ? '가입하기' : '로그인';
   document.getElementById('auth-switch').textContent = signup ? '이미 계정이 있나요? 로그인' : '계정이 없나요? 회원가입';
   hideAuthError();
+  if (!signup) hideAuthPending();
 }
 
 function showAuth() {
@@ -1142,6 +1160,7 @@ async function onPasswordSubmit(event) {
 async function onAuthSubmit(event) {
   event.preventDefault();
   hideAuthError();
+  hideAuthPending();
   const username = document.getElementById('auth-username').value.trim();
   const password = document.getElementById('auth-password').value;
   const confirm = document.getElementById('auth-password-confirm').value;
@@ -1157,18 +1176,51 @@ async function onAuthSubmit(event) {
   button.disabled = true;
   button.textContent = signup ? '가입 중' : '로그인 중';
   try {
-    const user = await api(signup ? '/api/auth/signup' : '/api/auth/login', {
+    const result = await api(signup ? '/api/auth/signup' : '/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(signup ? { username, password, phone, email } : { username, password }),
     });
-    showApp(user);
+    if (result.pendingConfirmation) {
+      setAuthMode('login');
+      showAuthPending(result.email, result.message);
+      toast('인증 메일을 보냈습니다.');
+      return;
+    }
+    showApp(result);
     const ok = await refresh();
     if (ok) toast(signup ? '가입했습니다.' : '로그인했습니다.');
+  } catch (error) {
+    if (error.code === 'email_not_confirmed') {
+      setAuthMode('login');
+      showAuthPending(error.email, error.message);
+      return;
+    }
+    showAuthError(errorMessage(error));
+  } finally {
+    button.disabled = false;
+    button.textContent = signup ? '가입하기' : '로그인';
+  }
+}
+
+async function onResendConfirmation() {
+  const pending = document.getElementById('auth-pending');
+  const email = pending.dataset.email || document.getElementById('auth-email').value.trim();
+  const username = document.getElementById('auth-username').value.trim();
+  const button = document.getElementById('auth-resend');
+  button.disabled = true;
+  button.textContent = '보내는 중';
+  try {
+    const result = await api('/api/auth/resend-confirmation', {
+      method: 'POST',
+      body: JSON.stringify(email ? { email } : { username }),
+    });
+    showAuthPending(result.email, result.message);
+    toast('인증 메일을 다시 보냈습니다.');
   } catch (error) {
     showAuthError(errorMessage(error));
   } finally {
     button.disabled = false;
-    button.textContent = signup ? '가입하고 시작' : '로그인';
+    button.textContent = '인증 메일 다시 보내기';
   }
 }
 
@@ -1182,14 +1234,24 @@ async function logout() {
 }
 
 async function boot() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('confirmed') === '1') {
+    history.replaceState({}, '', '/');
+  }
   try {
     const dashboard = await api('/api/dashboard');
     state.dashboard = dashboard;
     showApp(dashboard.user || { username: '' });
     document.getElementById('add-button').disabled = false;
     render();
+    if (params.get('confirmed') === '1') toast('이메일 인증이 완료되었습니다.');
   } catch (error) {
     showAuth();
+    if (params.get('confirmed') === '1') {
+      setAuthMode('login');
+      showAuthError('인증은 끝났습니다. 아이디로 로그인해 주세요.');
+      return;
+    }
     if (error.status !== 401) showAuthError(errorMessage(error));
   }
 }
@@ -1306,6 +1368,7 @@ function init() {
   });
 
   document.getElementById('auth-form').addEventListener('submit', onAuthSubmit);
+  document.getElementById('auth-resend').addEventListener('click', onResendConfirmation);
   document.getElementById('auth-switch').addEventListener('click', () => {
     setAuthMode(authMode.value === 'signup' ? 'login' : 'signup');
   });
