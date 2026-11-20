@@ -970,6 +970,8 @@ function onClick(event) {
 
 const authMode = { value: 'login' };
 
+const AUTH_FIELD_IDS = ['auth-username', 'auth-password', 'auth-password-confirm', 'auth-email', 'auth-phone'];
+
 function showAuthError(message) {
   const element = document.getElementById('auth-error');
   element.textContent = message;
@@ -980,6 +982,80 @@ function hideAuthError() {
   const element = document.getElementById('auth-error');
   element.textContent = '';
   element.classList.add('hidden');
+}
+
+function clearAuthFieldErrors() {
+  for (const id of AUTH_FIELD_IDS) {
+    const field = document.getElementById(id);
+    if (!field) continue;
+    field.classList.remove('field-invalid');
+    field.removeAttribute('aria-invalid');
+  }
+}
+
+function markAuthFieldInvalid(id) {
+  const field = document.getElementById(id);
+  if (!field) return;
+  field.classList.add('field-invalid');
+  field.setAttribute('aria-invalid', 'true');
+}
+
+function validateAuthForm() {
+  clearAuthFieldErrors();
+  hideAuthError();
+
+  const username = document.getElementById('auth-username').value.trim().toLowerCase();
+  const password = document.getElementById('auth-password').value;
+  const confirm = document.getElementById('auth-password-confirm').value;
+  const email = document.getElementById('auth-email').value.trim();
+  const phone = document.getElementById('auth-phone').value.trim();
+  const signup = authMode.value === 'signup';
+  const checks = [];
+
+  if (!username) {
+    checks.push({ id: 'auth-username', message: '아이디를 입력해 주세요.' });
+  } else if (!/^[a-z0-9_]{4,20}$/.test(username)) {
+    checks.push({
+      id: 'auth-username',
+      message: '아이디는 영문 소문자, 숫자, 밑줄(_)만 사용해 4~20자로 입력해 주세요.',
+    });
+  }
+
+  if (!password) {
+    checks.push({ id: 'auth-password', message: '비밀번호를 입력해 주세요.' });
+  } else if (password.length < 8) {
+    checks.push({ id: 'auth-password', message: '비밀번호는 8자 이상으로 입력해 주세요.' });
+  } else if (password.length > 72) {
+    checks.push({ id: 'auth-password', message: '비밀번호는 72자 이내로 입력해 주세요.' });
+  }
+
+  if (signup) {
+    if (!confirm) {
+      checks.push({ id: 'auth-password-confirm', message: '비밀번호 확인을 입력해 주세요.' });
+    } else if (password !== confirm) {
+      checks.push({ id: 'auth-password-confirm', message: '비밀번호가 서로 다릅니다.' });
+    }
+
+    if (!email) {
+      checks.push({ id: 'auth-email', message: '이메일을 입력해 주세요.' });
+    } else if (!/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(email)) {
+      checks.push({ id: 'auth-email', message: '이메일 형식이 올바르지 않습니다.' });
+    }
+
+    const digits = phone.replace(/\D/g, '');
+    if (!phone) {
+      checks.push({ id: 'auth-phone', message: '전화번호를 입력해 주세요.' });
+    } else if (!/^01\d{8,9}$/.test(digits)) {
+      checks.push({ id: 'auth-phone', message: '전화번호는 01로 시작하는 10~11자리 숫자로 입력해 주세요.' });
+    }
+  }
+
+  if (!checks.length) return true;
+
+  for (const item of checks) markAuthFieldInvalid(item.id);
+  showAuthError(checks[0].message);
+  document.getElementById(checks[0].id)?.focus();
+  return false;
 }
 
 function hideAuthPending() {
@@ -1011,6 +1087,7 @@ function setAuthMode(mode) {
   document.getElementById('auth-submit').textContent = signup ? '가입하기' : '로그인';
   document.getElementById('auth-switch').textContent = signup ? '이미 계정이 있나요? 로그인' : '계정이 없나요? 회원가입';
   hideAuthError();
+  clearAuthFieldErrors();
   if (!signup) hideAuthPending();
 }
 
@@ -1159,17 +1236,13 @@ async function onPasswordSubmit(event) {
 
 async function onAuthSubmit(event) {
   event.preventDefault();
-  hideAuthError();
   hideAuthPending();
+  if (!validateAuthForm()) return;
+
   const username = document.getElementById('auth-username').value.trim();
   const password = document.getElementById('auth-password').value;
-  const confirm = document.getElementById('auth-password-confirm').value;
   const phone = document.getElementById('auth-phone').value.trim();
   const email = document.getElementById('auth-email').value.trim();
-  if (authMode.value === 'signup' && password !== confirm) {
-    showAuthError('비밀번호가 서로 다릅니다.');
-    return;
-  }
 
   const button = document.getElementById('auth-submit');
   const signup = authMode.value === 'signup';
@@ -1368,6 +1441,14 @@ function init() {
   });
 
   document.getElementById('auth-form').addEventListener('submit', onAuthSubmit);
+  for (const id of AUTH_FIELD_IDS) {
+    const field = document.getElementById(id);
+    if (!field) continue;
+    field.addEventListener('input', () => {
+      field.classList.remove('field-invalid');
+      field.removeAttribute('aria-invalid');
+    });
+  }
   document.getElementById('auth-resend').addEventListener('click', onResendConfirmation);
   document.getElementById('auth-switch').addEventListener('click', () => {
     setAuthMode(authMode.value === 'signup' ? 'login' : 'signup');
