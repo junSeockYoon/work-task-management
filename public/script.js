@@ -966,8 +966,9 @@ function setAuthMode(mode) {
   const signup = authMode.value === 'signup';
   document.getElementById('auth-title').textContent = signup ? '회원가입' : '로그인';
   document.getElementById('auth-lead').textContent = signup
-    ? '아이디, 비밀번호, 전화번호만 있으면 됩니다.'
+    ? '아이디, 비밀번호, 이메일, 전화번호를 입력해 주세요.'
     : '아이디와 비밀번호로 들어옵니다.';
+  document.getElementById('email-field').classList.toggle('hidden', !signup);
   document.getElementById('phone-field').classList.toggle('hidden', !signup);
   document.getElementById('password-confirm-field').classList.toggle('hidden', !signup);
   document.getElementById('auth-password').autocomplete = signup ? 'new-password' : 'current-password';
@@ -1005,6 +1006,7 @@ async function onAuthSubmit(event) {
   const password = document.getElementById('auth-password').value;
   const confirm = document.getElementById('auth-password-confirm').value;
   const phone = document.getElementById('auth-phone').value.trim();
+  const email = document.getElementById('auth-email').value.trim();
   if (authMode.value === 'signup' && password !== confirm) {
     showAuthError('비밀번호가 서로 다릅니다.');
     return;
@@ -1017,7 +1019,7 @@ async function onAuthSubmit(event) {
   try {
     const user = await api(signup ? '/api/auth/signup' : '/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify(signup ? { username, password, phone } : { username, password }),
+      body: JSON.stringify(signup ? { username, password, phone, email } : { username, password }),
     });
     showApp(user);
     const ok = await refresh();

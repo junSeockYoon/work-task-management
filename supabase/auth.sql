@@ -1,16 +1,20 @@
 -- 회원가입/로그인용 프로필과 업무 소유자.
 -- Supabase SQL Editor 에서 이 파일 전체를 한 번 실행하세요.
--- 아이디는 서버에서 소문자로 저장하고, 이메일은 받지 않습니다.
+-- 아이디는 서버에서 소문자로 저장합니다.
 -- 비밀번호는 Supabase Auth 에만 저장됩니다.
+-- 이미 profiles 가 있다면 supabase/email.sql 을 이어서 실행하세요.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   username text not null,
   phone text not null,
+  email text not null,
   created_at timestamptz not null default now(),
   constraint profiles_username_key unique (username),
+  constraint profiles_email_key unique (email),
   constraint profiles_username_format check (username ~ '^[a-z0-9_]{4,20}$'),
-  constraint profiles_phone_format check (phone ~ '^01[0-9]{8,9}$')
+  constraint profiles_phone_format check (phone ~ '^01[0-9]{8,9}$'),
+  constraint profiles_email_format check (email ~* '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$')
 );
 
 alter table public.tasks
