@@ -53,6 +53,15 @@ app.get('/api/auth/me', requireUser, (req, res) => {
   res.json(auth.publicUser(req.user));
 });
 
+app.patch('/api/auth/me', requireUser, async (req, res) => {
+  try {
+    const user = await auth.updateProfile(req.user, req.body);
+    res.json(auth.publicUser(user));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 app.get('/api/dashboard', requireUser, async (req, res) => {
   try {
     const dashboard = await store.getDashboard(req.user);

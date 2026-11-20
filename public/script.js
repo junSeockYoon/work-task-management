@@ -549,8 +549,14 @@ function paintTabs() {
 }
 
 function applyView() {
+  const profile = state.view === 'profile';
   document.getElementById('view-board').classList.toggle('hidden', state.view !== 'board');
   document.getElementById('view-history').classList.toggle('hidden', state.view !== 'history');
+  document.getElementById('view-profile').classList.toggle('hidden', !profile);
+  document.getElementById('stats').classList.toggle('hidden', profile);
+  document.getElementById('search-input').classList.toggle('hidden', profile);
+  document.getElementById('add-button').classList.toggle('hidden', profile);
+  if (profile) fillProfileForm(state.user);
   paintTabs();
 }
 
@@ -883,6 +889,7 @@ function onClick(event) {
   const tab = event.target.closest('[data-view-tab]');
   if (tab) {
     state.view = tab.dataset.viewTab;
+    if (state.view === 'profile') fillProfileForm(state.user);
     applyView();
     return;
   }
@@ -984,7 +991,7 @@ function showAuth() {
   document.getElementById('workspace').classList.add('hidden');
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('add-button').disabled = true;
-  document.getElementById('account-name').classList.add('hidden');
+  document.getElementById('account-button').classList.add('hidden');
   document.getElementById('logout-button').classList.add('hidden');
 }
 
@@ -993,10 +1000,61 @@ function showApp(user) {
   document.getElementById('boot-status').classList.add('hidden');
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('workspace').classList.remove('hidden');
-  const name = document.getElementById('account-name');
-  name.textContent = user.username;
-  name.classList.remove('hidden');
+  const account = document.getElementById('account-button');
+  account.textContent = user.username || '마이페이지';
+  account.classList.remove('hidden');
   document.getElementById('logout-button').classList.remove('hidden');
+}
+
+function fillProfileForm(user) {
+  if (!user) return;
+  document.getElementById('profile-username').value = user.username || '';
+  document.getElementById('profile-email').value = user.email || '';
+  document.getElementById('profile-phone').value = user.phone || '';
+  document.getElementById('profile-current-password').value = '';
+  document.getElementById('profile-new-password').value = '';
+  document.getElementById('profile-new-password-confirm').value = '';
+  const error = document.getElementById('profile-error');
+  error.textContent = '';
+  error.classList.add('hidden');
+}
+
+function showProfileError(message) {
+  const error = document.getElementById('profile-error');
+  error.textContent = message;
+  error.classList.remove('hidden');
+}
+
+async function onProfileSubmit(event) {
+  event.preventDefault();
+  const button = document.getElementById('profile-submit');
+  const email = document.getElementById('profile-email').value.trim();
+  const phone = document.getElementById('profile-phone').value.trim();
+  const currentPassword = document.getElementById('profile-current-password').value;
+  const newPassword = document.getElementById('profile-new-password').value;
+  const newPasswordConfirm = document.getElementById('profile-new-password-confirm').value;
+  const payload = { email, phone };
+  if (newPassword || newPasswordConfirm || currentPassword) {
+    payload.currentPassword = currentPassword;
+    payload.newPassword = newPassword;
+    payload.newPasswordConfirm = newPasswordConfirm;
+  }
+
+  button.disabled = true;
+  button.textContent = '저장 중';
+  try {
+    const user = await api('/api/auth/me', { method: 'PATCH', body: JSON.stringify(payload) });
+    state.user = user;
+    if (state.dashboard) state.dashboard.user = user;
+    showApp(user);
+    fillProfileForm(user);
+    toast('회원 정보를 저장했습니다.');
+  } catch (error) {
+    showProfileError(errorMessage(error));
+  } finally {
+    button.disabled = false;
+    button.textContent = '저장';
+  }
 }
 
 async function onAuthSubmit(event) {
@@ -1166,6 +1224,11 @@ function init() {
     setAuthMode(authMode.value === 'signup' ? 'login' : 'signup');
   });
   document.getElementById('logout-button').addEventListener('click', logout);
+  document.getElementById('account-button').addEventListener('click', () => {
+    state.view = 'profile';
+    applyView();
+  });
+  document.getElementById('profile-form').addEventListener('submit', onProfileSubmit);
   document.getElementById('detail-close').addEventListener('click', closeDetail);
   document.getElementById('detail').addEventListener('click', (event) => {
     if (event.target.closest('[data-detail-panel]')) return;

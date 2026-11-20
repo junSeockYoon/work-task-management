@@ -90,11 +90,12 @@
 
         <div class="flex items-center gap-2">
           <input id="search-input" type="search" placeholder="업무 검색" class="w-36 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 sm:w-44" />
-          <p id="account-name" class="hidden text-sm text-slate-500"></p>
+          <button id="account-button" type="button" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"></button>
           <button id="logout-button" type="button" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">로그아웃</button>
           <div class="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="화면 전환">
             <button type="button" data-view-tab="board" class="rounded-lg bg-white px-3.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm" aria-pressed="true">보드</button>
             <button type="button" data-view-tab="history" class="rounded-lg px-3.5 py-1.5 text-sm font-medium text-slate-500" aria-pressed="false">완료 기록</button>
+            <button type="button" data-view-tab="profile" class="rounded-lg px-3.5 py-1.5 text-sm font-medium text-slate-500" aria-pressed="false">마이페이지</button>
           </div>
           <button id="add-button" type="button" disabled class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4" aria-hidden="true">
@@ -151,6 +152,49 @@
             <button id="history-clear-dates" type="button" class="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100">기간 지우기</button>
           </div>
           <div id="history-list"></div>
+        </div>
+      </div>
+
+      <div id="view-profile" class="mt-8 hidden">
+        <div class="mx-auto max-w-lg">
+          <header class="mb-6">
+            <p class="text-xs font-semibold tracking-widest text-slate-400">ACCOUNT</p>
+            <h2 class="mt-1 text-xl font-semibold tracking-tight">마이페이지</h2>
+            <p class="mt-1 text-sm text-slate-500">이메일과 전화번호, 비밀번호를 바꿀 수 있습니다.</p>
+          </header>
+          <form id="profile-form" class="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" novalidate>
+            <label class="block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">아이디</span>
+              <input id="profile-username" type="text" readonly class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 outline-none" />
+              <p class="mt-1.5 text-xs text-slate-400">아이디는 바꿀 수 없습니다.</p>
+            </label>
+            <label class="block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">이메일</span>
+              <input id="profile-email" type="email" autocomplete="email" maxlength="254" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+            </label>
+            <label class="block">
+              <span class="mb-1.5 block text-sm font-medium text-slate-700">전화번호</span>
+              <input id="profile-phone" type="tel" autocomplete="tel" inputmode="numeric" maxlength="13" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+            </label>
+            <div class="border-t border-slate-100 pt-4">
+              <p class="mb-3 text-sm font-medium text-slate-700">비밀번호 변경</p>
+              <p class="mb-3 text-xs text-slate-400">바꾸지 않을 때는 비워 두세요.</p>
+              <label class="mb-3 block">
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">현재 비밀번호</span>
+                <input id="profile-current-password" type="password" autocomplete="current-password" maxlength="72" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+              </label>
+              <label class="mb-3 block">
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">새 비밀번호</span>
+                <input id="profile-new-password" type="password" autocomplete="new-password" maxlength="72" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+              </label>
+              <label class="block">
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">새 비밀번호 확인</span>
+                <input id="profile-new-password-confirm" type="password" autocomplete="new-password" maxlength="72" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+              </label>
+            </div>
+            <p id="profile-error" class="hidden text-sm text-rose-600"></p>
+            <button id="profile-submit" type="submit" class="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">저장</button>
+          </form>
         </div>
       </div>
     </main>
