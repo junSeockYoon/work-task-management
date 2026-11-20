@@ -671,7 +671,11 @@ function closeModal() {
   modal.classList.add('hidden');
   modal.setAttribute('aria-hidden', 'true');
   state.editingId = null;
-  if (document.getElementById('confirm').classList.contains('hidden') && document.getElementById('detail').classList.contains('hidden')) {
+  if (
+    document.getElementById('confirm').classList.contains('hidden') &&
+    document.getElementById('detail').classList.contains('hidden') &&
+    document.getElementById('password-modal').classList.contains('hidden')
+  ) {
     document.body.classList.remove('overflow-hidden');
   }
 }
@@ -759,7 +763,11 @@ function closeDetail() {
   detail.classList.add('hidden');
   detail.setAttribute('aria-hidden', 'true');
   state.detailId = null;
-  if (document.getElementById('modal').classList.contains('hidden') && document.getElementById('confirm').classList.contains('hidden')) {
+  if (
+    document.getElementById('modal').classList.contains('hidden') &&
+    document.getElementById('confirm').classList.contains('hidden') &&
+    document.getElementById('password-modal').classList.contains('hidden')
+  ) {
     document.body.classList.remove('overflow-hidden');
   }
 }
@@ -780,7 +788,11 @@ function closeConfirm() {
   confirm.classList.add('hidden');
   confirm.setAttribute('aria-hidden', 'true');
   state.onConfirm = null;
-  if (document.getElementById('modal').classList.contains('hidden')) {
+  if (
+    document.getElementById('modal').classList.contains('hidden') &&
+    document.getElementById('detail').classList.contains('hidden') &&
+    document.getElementById('password-modal').classList.contains('hidden')
+  ) {
     document.body.classList.remove('overflow-hidden');
   }
 }
@@ -1011,9 +1023,6 @@ function fillProfileForm(user) {
   document.getElementById('profile-username').value = user.username || '';
   document.getElementById('profile-email').value = user.email || '';
   document.getElementById('profile-phone').value = user.phone || '';
-  document.getElementById('profile-current-password').value = '';
-  document.getElementById('profile-new-password').value = '';
-  document.getElementById('profile-new-password-confirm').value = '';
   const error = document.getElementById('profile-error');
   error.textContent = '';
   error.classList.add('hidden');
@@ -1025,35 +1034,108 @@ function showProfileError(message) {
   error.classList.remove('hidden');
 }
 
+function showPasswordError(message) {
+  const error = document.getElementById('password-error');
+  error.textContent = message;
+  error.classList.remove('hidden');
+}
+
+function hidePasswordError() {
+  const error = document.getElementById('password-error');
+  error.textContent = '';
+  error.classList.add('hidden');
+}
+
+function openPasswordModal() {
+  hidePasswordError();
+  document.getElementById('password-current').value = '';
+  document.getElementById('password-new').value = '';
+  document.getElementById('password-confirm').value = '';
+  const modal = document.getElementById('password-modal');
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('overflow-hidden');
+  document.getElementById('password-current').focus();
+}
+
+function closePasswordModal() {
+  const modal = document.getElementById('password-modal');
+  if (modal.classList.contains('hidden')) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+  if (
+    document.getElementById('modal').classList.contains('hidden') &&
+    document.getElementById('detail').classList.contains('hidden') &&
+    document.getElementById('confirm').classList.contains('hidden')
+  ) {
+    document.body.classList.remove('overflow-hidden');
+  }
+}
+
+function goToBoard() {
+  state.view = 'board';
+  applyView();
+}
+
 async function onProfileSubmit(event) {
   event.preventDefault();
   const button = document.getElementById('profile-submit');
   const email = document.getElementById('profile-email').value.trim();
   const phone = document.getElementById('profile-phone').value.trim();
-  const currentPassword = document.getElementById('profile-current-password').value;
-  const newPassword = document.getElementById('profile-new-password').value;
-  const newPasswordConfirm = document.getElementById('profile-new-password-confirm').value;
-  const payload = { email, phone };
-  if (newPassword || newPasswordConfirm || currentPassword) {
-    payload.currentPassword = currentPassword;
-    payload.newPassword = newPassword;
-    payload.newPasswordConfirm = newPasswordConfirm;
-  }
 
   button.disabled = true;
   button.textContent = '저장 중';
   try {
-    const user = await api('/api/auth/me', { method: 'PATCH', body: JSON.stringify(payload) });
+    const user = await api('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ email, phone }) });
     state.user = user;
     if (state.dashboard) state.dashboard.user = user;
     showApp(user);
-    fillProfileForm(user);
     toast('회원 정보를 저장했습니다.');
+    goToBoard();
   } catch (error) {
     showProfileError(errorMessage(error));
   } finally {
     button.disabled = false;
     button.textContent = '저장';
+  }
+}
+
+async function onPasswordSubmit(event) {
+  event.preventDefault();
+  hidePasswordError();
+  const button = document.getElementById('password-submit');
+  const currentPassword = document.getElementById('password-current').value;
+  const newPassword = document.getElementById('password-new').value;
+  const newPasswordConfirm = document.getElementById('password-confirm').value;
+  if (newPassword !== newPasswordConfirm) {
+    showPasswordError('새 비밀번호가 서로 다릅니다.');
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = '변경 중';
+  try {
+    const user = await api('/api/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        email: state.user?.email || document.getElementById('profile-email').value.trim(),
+        phone: state.user?.phone || document.getElementById('profile-phone').value.trim(),
+        currentPassword,
+        newPassword,
+        newPasswordConfirm,
+      }),
+    });
+    state.user = user;
+    if (state.dashboard) state.dashboard.user = user;
+    showApp(user);
+    closePasswordModal();
+    toast('비밀번호를 바꿨습니다.');
+    goToBoard();
+  } catch (error) {
+    showPasswordError(errorMessage(error));
+  } finally {
+    button.disabled = false;
+    button.textContent = '변경';
   }
 }
 
@@ -1212,6 +1294,10 @@ function init() {
       closeConfirm();
       return;
     }
+    if (!document.getElementById('password-modal').classList.contains('hidden')) {
+      closePasswordModal();
+      return;
+    }
     if (!document.getElementById('detail').classList.contains('hidden')) {
       closeDetail();
       return;
@@ -1229,6 +1315,14 @@ function init() {
     applyView();
   });
   document.getElementById('profile-form').addEventListener('submit', onProfileSubmit);
+  document.getElementById('password-open').addEventListener('click', openPasswordModal);
+  document.getElementById('password-close').addEventListener('click', closePasswordModal);
+  document.getElementById('password-cancel').addEventListener('click', closePasswordModal);
+  document.getElementById('password-form').addEventListener('submit', onPasswordSubmit);
+  document.getElementById('password-modal').addEventListener('click', (event) => {
+    if (event.target.closest('[data-password-panel]')) return;
+    closePasswordModal();
+  });
   document.getElementById('detail-close').addEventListener('click', closeDetail);
   document.getElementById('detail').addEventListener('click', (event) => {
     if (event.target.closest('[data-detail-panel]')) return;
