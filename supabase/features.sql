@@ -11,6 +11,14 @@ alter table public.tasks
 alter table public.tasks
   add column if not exists deleted_at timestamptz;
 
+alter table public.tasks
+  add column if not exists due_time text;
+
+alter table public.tasks drop constraint if exists tasks_due_time_hm;
+alter table public.tasks
+  add constraint tasks_due_time_hm
+  check (due_time is null or due_time ~ '^\d{2}:\d{2}$');
+
 alter table public.tasks drop constraint if exists tasks_checks_array;
 alter table public.tasks
   add constraint tasks_checks_array check (jsonb_typeof(checks) = 'array');

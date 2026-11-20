@@ -654,6 +654,7 @@ function openModal(task) {
   document.getElementById('title-input').value = task ? task.title : '';
   document.getElementById('description-input').value = task ? task.description || '' : '';
   document.getElementById('due-input').value = task ? task.dueDate || '' : state.dashboard?.today || '';
+  document.getElementById('due-time-input').value = task && task.dueTime ? task.dueTime : '';
   document.getElementById('repeat-input').value = task && REPEAT_LABEL[task.repeat] ? task.repeat : 'none';
   document.getElementById('check-input').value = '';
   state.formChecks = (task && task.checks ? task.checks : []).map((item) => ({ ...item }));
@@ -803,9 +804,11 @@ function validateForm() {
   const title = document.getElementById('title-input').value.trim();
   const description = document.getElementById('description-input').value.trim();
   const dueDate = document.getElementById('due-input').value;
+  const dueTime = document.getElementById('due-time-input').value;
   if (!title) return '제목을 입력해 주세요.';
   if (title.length > 120) return '제목은 120자 이내로 입력해 주세요.';
   if (!dueDate) return '마감일을 선택해 주세요.';
+  if (dueTime && !/^\d{2}:\d{2}$/.test(dueTime)) return '마감 시각 형식이 올바르지 않습니다.';
   if (description.length > 2000) return '상세 내용은 2000자 이내로 입력해 주세요.';
   if (!PRIORITY_META[state.priority]) return '우선순위를 선택해 주세요.';
   return '';
@@ -828,6 +831,7 @@ async function onSubmit(event) {
     title: document.getElementById('title-input').value.trim(),
     description: document.getElementById('description-input').value.trim(),
     dueDate: document.getElementById('due-input').value,
+    dueTime: document.getElementById('due-time-input').value || null,
     priority: state.priority,
     repeat: document.getElementById('repeat-input').value,
     checks: currentFormChecks(),

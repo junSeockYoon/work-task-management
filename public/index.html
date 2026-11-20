@@ -248,15 +248,20 @@
                 <label class="block">
                   <span class="mb-1.5 block text-sm font-medium text-slate-700">마감일 <span class="text-rose-500">*</span></span>
                   <input id="due-input" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
-                  <p class="mt-1.5 text-xs leading-5 text-slate-400">마감일에 따라 지난 일정, 오늘, 앞으로 3일, 이후 일정으로 나뉩니다.</p>
                 </label>
-                <div>
-                  <span class="mb-1.5 block text-sm font-medium text-slate-700">우선순위</span>
-                  <div id="priority-picker" class="grid grid-cols-3 gap-2">
-                    <button type="button" data-priority="High" class="rounded-xl border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600">높음</button>
-                    <button type="button" data-priority="Medium" class="rounded-xl border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600">보통</button>
-                    <button type="button" data-priority="Low" class="rounded-xl border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600">낮음</button>
-                  </div>
+                <label class="block">
+                  <span class="mb-1.5 block text-sm font-medium text-slate-700">마감 시각</span>
+                  <input id="due-time-input" type="time" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
+                  <p class="mt-1.5 text-xs leading-5 text-slate-400">비워 두면 날짜만 사용합니다. 캘린더 연동 시 시각이 쓰입니다.</p>
+                </label>
+              </div>
+
+              <div>
+                <span class="mb-1.5 block text-sm font-medium text-slate-700">우선순위</span>
+                <div id="priority-picker" class="grid grid-cols-3 gap-2">
+                  <button type="button" data-priority="High" class="rounded-xl border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600">높음</button>
+                  <button type="button" data-priority="Medium" class="rounded-xl border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600">보통</button>
+                  <button type="button" data-priority="Low" class="rounded-xl border border-slate-200 px-2 py-2 text-sm font-medium text-slate-600">낮음</button>
                 </div>
               </div>
 
