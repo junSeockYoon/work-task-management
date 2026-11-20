@@ -1,8 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "server.js": {
-      "includeFiles": "data/tasks.json"
-    }
-  }
+  "regions": ["icn1"]
 }

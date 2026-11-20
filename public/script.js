@@ -191,16 +191,19 @@ function renderBoardCard(task) {
 
   return `
     <article class="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
-      <div class="flex flex-wrap items-center gap-1.5">
-        ${priorityBadge(task.priority)}
-        ${statusBadge(task)}
-      </div>
-      <h3 class="mt-2 break-words text-sm font-semibold leading-6 text-slate-900">${escapeHtml(task.title)}</h3>
-      ${description}
-      <div class="mt-3 flex flex-wrap items-center gap-2">
-        ${dueBadge(task)}
-        ${dateLabel}
-      </div>
+      <button type="button" data-action="open" data-id="${escapeHtml(task.id)}" class="block w-full rounded-lg text-left">
+        <div class="flex flex-wrap items-center gap-1.5">
+          ${priorityBadge(task.priority)}
+          ${statusBadge(task)}
+        </div>
+        <h3 class="mt-2 break-words text-sm font-semibold leading-6 text-slate-900">${escapeHtml(task.title)}</h3>
+        ${description}
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          ${dueBadge(task)}
+          ${dateLabel}
+          <span class="ml-auto text-xs font-medium text-slate-400">자세히</span>
+        </div>
+      </button>
       ${boardActions(task)}
     </article>
   `;
@@ -216,11 +219,11 @@ function renderColumn({ column, kicker, kickerClass, title, subtitle, tasks, emp
     <section data-column="${column}">
       <header class="mb-3 flex items-start justify-between gap-3 px-1">
         <div>
-          <p class="text-[11px] font-semibold tracking-[0.16em] ${kickerClass}">${kicker}</p>
-          <h2 class="mt-1 text-[15px] font-semibold text-slate-900">${title}</h2>
+          <p class="text-xs font-semibold tracking-widest ${kickerClass}">${kicker}</p>
+          <h2 class="mt-1 text-base font-semibold text-slate-900">${title}</h2>
           <p class="mt-0.5 text-xs text-slate-400">${escapeHtml(subtitle)}</p>
         </div>
-        <span class="mt-1 inline-flex min-w-[1.75rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${countTone}">${tasks.length}</span>
+        <span class="mt-1 inline-flex min-w-7 items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${countTone}">${tasks.length}</span>
       </header>
       <div class="space-y-3">${body}</div>
     </section>
@@ -271,8 +274,8 @@ function renderLater(data) {
     <section class="mt-12" data-column="later">
       <header class="mb-3 flex items-end justify-between gap-3 px-1">
         <div>
-          <p class="text-[11px] font-semibold tracking-[0.16em] text-slate-400">LATER</p>
-          <h2 class="mt-1 text-[15px] font-semibold text-slate-900">이후 일정</h2>
+          <p class="text-xs font-semibold tracking-widest text-slate-400">LATER</p>
+          <h2 class="mt-1 text-base font-semibold text-slate-900">이후 일정</h2>
           <p class="mt-0.5 text-xs text-slate-400">4일 후부터 마감인 업무</p>
         </div>
         <span class="text-xs font-semibold text-slate-500">${data.later.length}건</span>
@@ -341,10 +344,12 @@ function renderHistoryCard(task) {
           </svg>
         </span>
         <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-1.5">${priorityBadge(task.priority)}</div>
-          <h3 class="mt-2 break-words text-sm font-semibold leading-6 text-slate-900">${escapeHtml(task.title)}</h3>
-          ${description}
-          <p class="mt-2 text-xs text-slate-400">${meta}</p>
+          <button type="button" data-action="open" data-id="${escapeHtml(task.id)}" class="block w-full rounded-lg text-left">
+            <div class="flex flex-wrap items-center gap-1.5">${priorityBadge(task.priority)}</div>
+            <h3 class="mt-2 break-words text-sm font-semibold leading-6 text-slate-900">${escapeHtml(task.title)}</h3>
+            ${description}
+            <p class="mt-2 text-xs text-slate-400">${meta} · 자세히</p>
+          </button>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" data-action="edit" data-id="${escapeHtml(task.id)}" class="text-xs font-medium text-slate-500 hover:text-slate-800">수정</button>
             <button type="button" data-action="delete" data-id="${escapeHtml(task.id)}" class="text-xs font-medium text-slate-400 hover:text-rose-600">삭제</button>
@@ -390,7 +395,7 @@ function renderHistory() {
   document.getElementById('view-history').innerHTML = `
     <div class="mx-auto max-w-3xl">
       <header class="mb-6">
-        <p class="text-[11px] font-semibold tracking-[0.16em] text-slate-400">HISTORY</p>
+        <p class="text-xs font-semibold tracking-widest text-slate-400">HISTORY</p>
         <h2 class="mt-1 text-xl font-semibold tracking-tight">완료 기록</h2>
         <p class="mt-1 text-sm text-slate-500">끝낸 일을 완료일 기준으로 모아 둡니다. 총 ${total}건.</p>
       </header>
@@ -504,7 +509,51 @@ function closeModal() {
   modal.classList.add('hidden');
   modal.setAttribute('aria-hidden', 'true');
   state.editingId = null;
-  if (document.getElementById('confirm').classList.contains('hidden')) {
+  if (document.getElementById('confirm').classList.contains('hidden') && document.getElementById('detail').classList.contains('hidden')) {
+    document.body.classList.remove('overflow-hidden');
+  }
+}
+
+const STATUS_LABEL = { todo: '할 일', 'in-progress': '진행 중', done: '완료' };
+
+function openDetail(task) {
+  state.detailId = task.id;
+  document.getElementById('detail-title').textContent = task.title;
+  document.getElementById('detail-badges').innerHTML = [
+    priorityBadge(task.priority),
+    badge(STATUS_LABEL[task.status] || task.status, 'bg-slate-100 text-slate-600 ring-slate-500/10'),
+    dueBadge(task),
+  ].join('');
+  const bits = [];
+  if (task.dueDateLabel) bits.push(`마감 ${task.dueDateLabel}`);
+  if (task.completedTimeLabel) bits.push(`${task.completedTimeLabel} 완료`);
+  document.getElementById('detail-meta').textContent = bits.join(' · ');
+  const body = document.getElementById('detail-body');
+  const empty = !task.description;
+  body.textContent = empty ? '상세 내용이 없습니다.' : task.description;
+  body.classList.toggle('text-slate-400', empty);
+  body.classList.toggle('text-slate-700', !empty);
+
+  const primary = document.getElementById('detail-primary');
+  const done = task.status === 'done';
+  primary.textContent = done ? '되돌리기' : '완료';
+  primary.dataset.kind = done ? 'reopen' : 'complete';
+  document.getElementById('detail-start').classList.toggle('hidden', task.status !== 'todo');
+
+  const detail = document.getElementById('detail');
+  detail.classList.remove('hidden');
+  detail.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('overflow-hidden');
+  document.getElementById('detail-close').focus();
+}
+
+function closeDetail() {
+  const detail = document.getElementById('detail');
+  if (detail.classList.contains('hidden')) return;
+  detail.classList.add('hidden');
+  detail.setAttribute('aria-hidden', 'true');
+  state.detailId = null;
+  if (document.getElementById('modal').classList.contains('hidden') && document.getElementById('confirm').classList.contains('hidden')) {
     document.body.classList.remove('overflow-hidden');
   }
 }
@@ -592,6 +641,7 @@ async function updateStatus(id, status, message, nextView) {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
+    closeDetail();
     if (nextView) state.view = nextView;
     const ok = await refresh();
     if (ok) toast(message);
@@ -601,6 +651,7 @@ async function updateStatus(id, status, message, nextView) {
 }
 
 function requestDelete(task) {
+  closeDetail();
   openConfirm({
     title: '업무를 삭제할까요?',
     body: `「${task.title}」 업무를 삭제합니다. 삭제한 뒤에는 되돌릴 수 없습니다.`,
@@ -637,6 +688,7 @@ function onClick(event) {
     return;
   }
 
+  if (action === 'open') openDetail(task);
   if (action === 'edit') openModal(task);
   if (action === 'delete') requestDelete(task);
   if (action === 'start') updateStatus(id, 'in-progress', '진행 중으로 바꿨습니다.');
@@ -738,9 +790,11 @@ async function logout() {
 
 async function boot() {
   try {
-    const me = await api('/api/auth/me');
-    showApp(me);
-    await refresh();
+    const dashboard = await api('/api/dashboard');
+    state.dashboard = dashboard;
+    showApp(dashboard.user || { username: '' });
+    document.getElementById('add-button').disabled = false;
+    render();
   } catch (error) {
     showAuth();
     if (error.status !== 401) showAuthError(errorMessage(error));
@@ -792,6 +846,10 @@ function init() {
       closeConfirm();
       return;
     }
+    if (!document.getElementById('detail').classList.contains('hidden')) {
+      closeDetail();
+      return;
+    }
     if (!document.getElementById('modal').classList.contains('hidden')) closeModal();
   });
 
@@ -800,6 +858,32 @@ function init() {
     setAuthMode(authMode.value === 'signup' ? 'login' : 'signup');
   });
   document.getElementById('logout-button').addEventListener('click', logout);
+  document.getElementById('detail-close').addEventListener('click', closeDetail);
+  document.getElementById('detail').addEventListener('click', (event) => {
+    if (event.target.closest('[data-detail-panel]')) return;
+    closeDetail();
+  });
+  document.getElementById('detail-edit').addEventListener('click', () => {
+    const task = findTask(state.detailId);
+    closeDetail();
+    if (task) openModal(task);
+  });
+  document.getElementById('detail-delete').addEventListener('click', () => {
+    const task = findTask(state.detailId);
+    if (task) requestDelete(task);
+  });
+  document.getElementById('detail-start').addEventListener('click', () => {
+    const task = findTask(state.detailId);
+    if (!task) return;
+    updateStatus(task.id, 'in-progress', '진행 중으로 바꿨습니다.');
+  });
+  document.getElementById('detail-primary').addEventListener('click', () => {
+    const task = findTask(state.detailId);
+    if (!task) return;
+    const kind = document.getElementById('detail-primary').dataset.kind;
+    if (kind === 'reopen') updateStatus(task.id, 'todo', '할 일로 되돌렸습니다.', 'board');
+    else updateStatus(task.id, 'done', '완료 기록으로 옮겼습니다.');
+  });
 
   setPriority('Medium');
   boot();

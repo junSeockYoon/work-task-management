@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
 app.use(express.json());
 app.use((req, res, next) => {
-  res.set('Cache-Control', 'no-store');
+  if (req.path.startsWith('/api')) res.set('Cache-Control', 'no-store');
   next();
 });
 
@@ -55,7 +55,8 @@ app.get('/api/auth/me', requireUser, (req, res) => {
 
 app.get('/api/dashboard', requireUser, async (req, res) => {
   try {
-    res.json(await store.getDashboard(req.user));
+    const dashboard = await store.getDashboard(req.user);
+    res.json({ ...dashboard, user: auth.publicUser(req.user) });
   } catch (error) {
     sendError(res, error);
   }
